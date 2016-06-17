@@ -1,0 +1,27 @@
+{
+  "name": "sitemap-draw",
+  "version": "1.0.0",
+  "description": "Generates a sitemap and then draws it in browser.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AgrawalAmey/sitemap-draw.git"
+  },
+  "keywords": [
+    "sitemap"
+  ],
+  "author": "Amey Agrawal",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/AgrawalAmey/sitemap-draw/issues"
+  },
+  "homepage": "https://github.com/AgrawalAmey/sitemap-draw#readme",
+  "dependencies": {
+    "cheerio": "^0.20.0",
+    "request": "^2.72.0",
+    "url-parse": "^1.1.1"
+  }
+}
