@@ -23,7 +23,6 @@
   "homepage": "https://github.com/AgrawalAmey/sitemap-draw#readme",
   "dependencies": {
     "cheerio": "^0.20.0",
-    "concurrently": "^2.1.0",
     "open": "0.0.5",
     "request": "^2.72.0",
     "url-parse": "^1.1.1"
