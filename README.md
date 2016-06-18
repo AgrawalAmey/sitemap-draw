@@ -20,7 +20,11 @@ var spyder = new Spyder({
 ```
 ###### Default Values
 By default the values are as follows:
-`maxDepth` 2 \n
-`startUrl` "http://karpathy.github.io/" \n
-`visitAbsoluteLinks` `false` \n
-`startServer` `false`
+
+`maxDepth :` 2
+
+`startUrl :` "http://karpathy.github.io/"
+
+`visitAbsoluteLinks :` `false`
+
+`startServer :` `false`
