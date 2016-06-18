@@ -36,7 +36,7 @@ function init(){
     var json = {};
     //end
     $.ajax({
-      url: "../../server/sitemap.json",
+      url: "../sitemap.json",
       async: false,
        beforeSend: function(xhr){
         if (xhr.overrideMimeType) xhr.overrideMimeType("application/json"); 
