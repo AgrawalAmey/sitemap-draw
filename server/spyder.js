@@ -5,7 +5,7 @@ var fs = require("fs");
 
 function Spyder(options){
 	this.MAX_DEPTH = (options && options.max_depth) || 2;
-	this.startUrl = (options && options.startUrl) || "http://www.bits-pilani.ac.in";
+	this.startUrl = (options && options.startUrl) || "http://reachtarunhere.github.io/";
 	this.visitAbsoluteLinks = (options && options.visitAbsoluteLinks) || false;
 	this.pagesToVisit = [];
 	this.pagesVisited = {};
@@ -59,7 +59,8 @@ Spyder.prototype.crawl =  function() {
 Spyder.prototype.visitPage = function(page) {
   var self = this;
   // Max depth condition
-  if(page.data.deapth > this.MAX_DEPTH) {
+  if(page.data.depth > this.MAX_DEPTH) {
+    self.crawl();
     return;
   }
 
@@ -70,7 +71,9 @@ Spyder.prototype.visitPage = function(page) {
   console.log("Visiting page " + page.data.url);
   request(page.data.url.href, function(error, response, body) {
     if(error) {
-     console.log("Error: " + error);
+      console.log("Error: " + error);
+      self.crawl();
+      return;
     }
 
     // Check status code (200 is HTTP OK)
@@ -101,9 +104,13 @@ Spyder.prototype.collectLinks =  function($, parentPage, callback) {
     console.log("Found " + relativeLinks.length + " relative links on page");
     relativeLinks.each(function() {
     	var page = self.getObject(self.baseUrl + $(this).attr('href'));
+      if (page.data.url.href in self.pagesVisited) {
+        // We've already visited this page, so skip
+        return;
+      }
     	page.data.depth = parentPage.data.depth + 1;
     	parentPage.children.push(page);
-        self.pagesToVisit.push(page);
+      self.pagesToVisit.push(page);
     });
 
     if(this.visitAbsoluteLinks){
@@ -111,12 +118,20 @@ Spyder.prototype.collectLinks =  function($, parentPage, callback) {
 	    console.log("Found " + absoluteLinks.length + " relative links on page");
 	  	absoluteLinks.each(function() {
 	    	var page = self.getObject($(this).attr('href'));
+        if (page.data.url.href in self.pagesVisited) {
+          // We've already visited this page, so skip
+          return;
+        }
 	    	page.data.depth = parentPage.data.depth + 1;
 	    	parentPage.children.push(page);
-	        self.pagesToVisit.push(page);
+	      self.pagesToVisit.push(page);
 	  	});  	
     }
 }
+
+spyder = new Spyder();
+spyder.start(); 
+
 // Refresh every 6 Hrs
 setInterval(function(){
   spyder = new Spyder();
