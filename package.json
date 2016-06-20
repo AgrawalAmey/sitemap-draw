@@ -25,6 +25,7 @@
     "cheerio": "^0.20.0",
     "open": "0.0.5",
     "request": "^2.72.0",
+    "string.prototype.startswith": "^0.2.0",
     "url-join": "^1.1.0",
     "url-parse": "^1.1.1"
   }

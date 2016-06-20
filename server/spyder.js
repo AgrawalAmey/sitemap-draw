@@ -6,6 +6,7 @@ var http = require('http');
 var path = require('path');
 var open = require('open');
 var urljoin = require('url-join');
+require('string.prototype.startswith');
 
 function Spyder(options){
 	this.MAX_DEPTH = (options && options.maxDepth) || 8;
@@ -115,11 +116,29 @@ Spyder.prototype = {
   },
   collectLinks : function($, parentPage, callback) {
     var self = this;
-
     var relativeLinks = $('a:not([href*="://"],[target="_blank"],[href^="#"],[href^="mailto:"])');
     console.log("Found " + relativeLinks.length + " relative links on page");
     relativeLinks.each(function() {
-      var page = self.getObject(urljoin(self.baseUrl, $(this).attr('href')));
+      if($(this).attr('href').startsWith('/')){
+        var page = self.getObject(urljoin(self.baseUrl, $(this).attr('href')));        
+      }else{
+        var base = path.parse(parentPage.data.url.href).dir;
+        var relative = $(this).attr('href');
+        var stack = base.split("/"),
+        parts = relative.split("/");
+        stack.pop(); // remove current file name (or empty string)
+                  // (omit if "base" is the current folder without trailing slash)
+        for (var i=0; i<parts.length; i++) {
+          if (parts[i] == ".")
+            continue;
+          if (parts[i] == "..")
+            stack.pop();
+          else
+            stack.push(parts[i]);
+        }
+        var page = self.getObject(stack.join("/"));
+      }
+
       if (page.data.url.href in self.pagesVisited) {
         // We've already visited this page, so skip
         return;
