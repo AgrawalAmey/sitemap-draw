@@ -5,6 +5,7 @@ var fs = require("fs");
 var http = require('http');
 var path = require('path');
 var open = require('open');
+var urljoin = require('url-join');
 
 function Spyder(options){
 	this.MAX_DEPTH = (options && options.maxDepth) || 8;
@@ -118,7 +119,7 @@ Spyder.prototype = {
     var relativeLinks = $('a:not([href*="://"],[target="_blank"],[href^="#"],[href^="mailto:"])');
     console.log("Found " + relativeLinks.length + " relative links on page");
     relativeLinks.each(function() {
-      var page = self.getObject(self.baseUrl + $(this).attr('href'));
+      var page = self.getObject(urljoin(self.baseUrl, $(this).attr('href')));
       if (page.data.url.href in self.pagesVisited) {
         // We've already visited this page, so skip
         return;
