@@ -7,7 +7,7 @@ var path = require('path');
 var open = require('open');
 
 function Spyder(options){
-	this.MAX_DEPTH = (options && options.maxDepth) || 2;
+	this.MAX_DEPTH = (options && options.maxDepth) || 8;
 	this.startUrl = (options && options.startUrl) || "http://karpathy.github.io/";
 	this.visitAbsoluteLinks = (options && options.visitAbsoluteLinks) || true;
 	this.pagesToVisit = [];
@@ -67,7 +67,7 @@ Spyder.prototype = {
       // New page we haven't visited
       //Check if the page was present in last crawl if yes mark isNew to false.
       if(nextPage.data.url.href in this.pagesLastVisited){
-        nextPage.data.isNew = fasle;
+        nextPage.data.isNew = false;
       }
       this.visitPage(nextPage);
     }
@@ -115,7 +115,7 @@ Spyder.prototype = {
   collectLinks : function($, parentPage, callback) {
     var self = this;
 
-    var relativeLinks = $("a[href^='/']");
+    var relativeLinks = $('a:not([href*="://"],[target="_blank"],[href^="#"],[href^="mailto:"])');
     console.log("Found " + relativeLinks.length + " relative links on page");
     relativeLinks.each(function() {
       var page = self.getObject(self.baseUrl + $(this).attr('href'));
@@ -129,7 +129,7 @@ Spyder.prototype = {
     });
 
     if(this.visitAbsoluteLinks){
-      var absoluteLinks = $("a[href^='http']");
+      var absoluteLinks = $("a[href^='http'],[href^='https']");
       console.log("Found " + absoluteLinks.length + " absolute links on page");
       absoluteLinks.each(function() {
         var page = self.getObject($(this).attr('href'));
