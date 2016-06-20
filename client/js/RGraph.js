@@ -66,7 +66,7 @@ function init(){
         },
         //Set Node and Edge styles.
         Node: {
-            color: '#f00'
+          overridable: true
         },
         
         Edge: {
@@ -121,6 +121,12 @@ function init(){
     rgraph.graph.eachNode(function(n) {
       var pos = n.getPos();
       pos.setc(-200, -200);
+      if(n.data.isNew == true){
+        n.setData('color', "#0f0");
+      }else{
+        n.setData('color', "#f00");
+      }
+
     });
     rgraph.compute('end');
     rgraph.fx.animate({
@@ -132,4 +138,4 @@ function init(){
 // Refresh every 6 Hrs
 setInterval(function(){
   window.location.reload();
-}, 21600000);
+}, 900000);

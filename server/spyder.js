@@ -9,10 +9,12 @@ var open = require('open');
 function Spyder(options){
 	this.MAX_DEPTH = (options && options.maxDepth) || 2;
 	this.startUrl = (options && options.startUrl) || "http://karpathy.github.io/";
-	this.visitAbsoluteLinks = (options && options.visitAbsoluteLinks) || false;
+	this.visitAbsoluteLinks = (options && options.visitAbsoluteLinks) || true;
 	this.pagesToVisit = [];
 	this.pagesVisited = {};
 	this.count = 0;
+  // Get pages in last visit
+  this.pagesLastVisited = JSON.parse(fs.readFileSync(path.join(__dirname, '../server/visitedPages.json'), 'utf8'));
 	// Creating object of start url
 	this.startUrl = this.getObject(this.startUrl);
   this.startServer = (options && options.startServer) || false;
@@ -27,9 +29,12 @@ Spyder.prototype = {
     this.pagesToVisit.push(this.startUrl);
     this.crawl();
   },
+  //write files at the end of crawl
   writeJSON : function(){
+    fs.writeFile(path.join(__dirname, '../server/visitedPages.json'), JSON.stringify(this.pagesVisited), 'utf-8');
     fs.writeFile(path.join(__dirname, '../client/sitemap.json'), JSON.stringify(this.startUrl), 'utf-8');
   },
+  //Create default object for page
   getObject : function(url){
     var page = new Object();
     page.id = this.count;
@@ -37,14 +42,17 @@ Spyder.prototype = {
     page.data = {}
     page.data.url = new URL(url);
     page.data.title = null;
+    page.data.isNew = true;
     page.children = [];
     page.data.depth = 0;
     return page;
   },
   crawl : function() {  
     var nextPage = this.pagesToVisit.pop();
-  
+    
+    // End of crawl
     if (nextPage == undefined){
+      //Write JONS and start server
       this.writeJSON();
       if(this.startServer == true)
         startHTTPServer();
@@ -57,6 +65,10 @@ Spyder.prototype = {
       this.crawl();
     } else {
       // New page we haven't visited
+      //Check if the page was present in last crawl if yes mark isNew to false.
+      if(nextPage.data.url.href in this.pagesLastVisited){
+        nextPage.data.isNew = fasle;
+      }
       this.visitPage(nextPage);
     }
   },
@@ -118,10 +130,10 @@ Spyder.prototype = {
 
     if(this.visitAbsoluteLinks){
       var absoluteLinks = $("a[href^='http']");
-      console.log("Found " + absoluteLinks.length + " relative links on page");
+      console.log("Found " + absoluteLinks.length + " absolute links on page");
       absoluteLinks.each(function() {
         var page = self.getObject($(this).attr('href'));
-        if (page.data.url.href in self.pagesVisited) {
+        if (page.data.url.href in self.pagesVisited || page.data.url.hostname != self.startUrl.data.url.hostname) {
           // We've already visited this page, so skip
           return;
         }
@@ -191,6 +203,7 @@ function startHTTPServer(){
 
 
 // Genarate sitemap
+//fs.writeFileSync(path.join(__dirname, '../server/visitedPages.json'), '{}', 'utf-8');
 var spyder = new Spyder({
   "startServer" : true
 });
@@ -200,4 +213,4 @@ spyder.start();
 setInterval(function(){
   spyder = new Spyder();
   spyder.start(); 
-}, 21600000);
+}, 86400000);
