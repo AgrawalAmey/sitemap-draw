@@ -9,20 +9,20 @@ var urljoin = require('url-join');
 require('string.prototype.startswith');
 
 function Spyder(options){
-	this.MAX_DEPTH = (options && options.maxDepth) || 8;
-	this.startUrl = (options && options.startUrl) || "http://karpathy.github.io/";
-	this.visitAbsoluteLinks = (options && options.visitAbsoluteLinks) || true;
-	this.pagesToVisit = [];
-	this.pagesVisited = {};
-	this.count = 0;
+  this.MAX_DEPTH = (options && options.maxDepth) || 8;
+  this.startUrl = (options && options.startUrl) || "http://karpathy.github.io/";
+  this.visitAbsoluteLinks = (options && options.visitAbsoluteLinks) || true;
+  this.pagesToVisit = [];
+  this.pagesVisited = {};
+  this.count = 0;
   // Get pages in last visit
   this.pagesLastVisited = JSON.parse(fs.readFileSync(path.join(__dirname, '../server/visitedPages.json'), 'utf8'));
-	// Creating object of start url
-	this.startUrl = this.getObject(this.startUrl);
+  // Creating object of start url
+  this.startUrl = this.getObject(this.startUrl);
   this.startServer = (options && options.startServer) || false;
 
-	// Base URL
-	this.baseUrl = this.startUrl.data.url.protocol + "//" + this.startUrl.data.url.hostname;
+  // Base URL
+  this.baseUrl = this.startUrl.data.url.protocol + "//" + this.startUrl.data.url.hostname;
 }
 
 Spyder.prototype = {
@@ -116,13 +116,23 @@ Spyder.prototype = {
   },
   collectLinks : function($, parentPage, callback) {
     var self = this;
+    // Regexp to find for non-absolute links
     var relativeLinks = $('a:not([href*="://"],[target="_blank"],[href^="#"],[href^="mailto:"])');
     console.log("Found " + relativeLinks.length + " relative links on page");
     relativeLinks.each(function() {
+      //Replace backslashes 
+      $(this).attr('href').replace(/\\/g,"/");
+      // If path is given wrt hostname
       if($(this).attr('href').startsWith('/')){
         var page = self.getObject(urljoin(self.baseUrl, $(this).attr('href')));        
       }else{
-        var base = path.parse(parentPage.data.url.href).dir;
+        // If the parent-page has filename?
+        if(parentPage.data.url.href.lastIndexOf('.') > parentPage.data.url.href.lastIndexOf('/')){
+          var base = path.parse(parentPage.data.url.href).dir;         
+        }else{
+          var base = parentPage.data.url.href;
+        }
+        //Spegetti for getting right static path name
         var relative = $(this).attr('href');
         var stack = base.split("/"),
         parts = relative.split("/");
@@ -149,6 +159,8 @@ Spyder.prototype = {
     });
 
     if(this.visitAbsoluteLinks){
+      //Replace backslashes 
+      $(this).attr('href').replace(/\\/g,"/");
       var absoluteLinks = $("a[href^='http'],[href^='https']");
       console.log("Found " + absoluteLinks.length + " absolute links on page");
       absoluteLinks.each(function() {
