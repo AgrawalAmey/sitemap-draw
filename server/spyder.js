@@ -1,3 +1,26 @@
+/*
+Copyright (c) 2011 Sencha Inc. - Author: Amey Agrawal (http://github.com/agrawalamey)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+ */
+require('string.prototype.startswith');
 var request = require('request');
 var cheerio = require('cheerio');
 var URL = require('url-parse');
@@ -6,17 +29,20 @@ var http = require('http');
 var path = require('path');
 var open = require('open');
 var urljoin = require('url-join');
-require('string.prototype.startswith');
 
 function Spyder(options){
-  this.MAX_DEPTH = (options && options.maxDepth) || 8;
-  this.startUrl = (options && options.startUrl) || "http://karpathy.github.io/";
-  this.visitAbsoluteLinks = (options && options.visitAbsoluteLinks) || true;
+  
+  this.MAX_DEPTH = (options && options.maxDepth) || 6;
+  this.startUrl = (options && options.startUrl) || "http://10.1.50.45/tryhome/";
+  this.allowOtherHostname = (options && options.allowOtherHostname) || true;
   this.pagesToVisit = [];
   this.pagesVisited = {};
   this.count = 0;
+  this.validPageTypes = [".jsp", ".html", ".htm", ''];
+  
   // Get pages in last visit
   this.pagesLastVisited = JSON.parse(fs.readFileSync(path.join(__dirname, '../server/visitedPages.json'), 'utf8'));
+  
   // Creating object of start url
   this.startUrl = this.getObject(this.startUrl);
   this.startServer = (options && options.startServer) || false;
@@ -26,18 +52,21 @@ function Spyder(options){
 }
 
 Spyder.prototype = {
-  start : function(){
+  
+  start: function(){
     // Start crawling 
     this.pagesToVisit.push(this.startUrl);
     this.crawl();
   },
+  
   //write files at the end of crawl
-  writeJSON : function(){
+  writeJSON: function(){
     fs.writeFile(path.join(__dirname, '../server/visitedPages.json'), JSON.stringify(this.pagesVisited), 'utf-8');
     fs.writeFile(path.join(__dirname, '../client/sitemap.json'), JSON.stringify(this.startUrl), 'utf-8');
   },
+  
   //Create default object for page
-  getObject : function(url){
+  getObject: function(url){
     var page = new Object();
     page.id = this.count;
     this.count++;
@@ -49,16 +78,18 @@ Spyder.prototype = {
     page.data.depth = 0;
     return page;
   },
-  crawl : function() {  
+  
+  crawl: function() {  
     var nextPage = this.pagesToVisit.pop();
     
     // End of crawl
     if (nextPage == undefined){
       //Write JONS and start server
       this.writeJSON();
-      if(this.startServer == true)
+      if(this.startServer == true){
         startHTTPServer();
         open('http://localhost:8000');
+      }
       return;
     }
   
@@ -74,26 +105,31 @@ Spyder.prototype = {
       this.visitPage(nextPage);
     }
   },
-  visitPage : function(page) {
+  
+  visitPage: function(page) {
     var self = this;
-    // Max depth condition
-    if(page.data.depth > this.MAX_DEPTH) {
+    // Max depth condition & valid data type
+    if(page.data.depth > this.MAX_DEPTH || (this.validPageTypes.indexOf(path.extname(page.data.url.href))<0)) {
       self.crawl();
       return;
     }
-  
+
     // Add page to our set
     this.pagesVisited[page.data.url] = true;
   
     // Make the request
     console.log("Visiting page " + page.data.url);
     request(page.data.url.href, function(error, response, body) {
+
       if(error) {
         console.log("Error: " + error);
         self.crawl();
         return;
       }
   
+
+      page.data.statusCode = response.statusCode;
+
       // Check status code (200 is HTTP OK)
       console.log("Status code: " + response.statusCode);
       if(response.statusCode !== 200) {
@@ -106,38 +142,55 @@ Spyder.prototype = {
   
       // Add title
       page.data.title = $('title').text();
-      page.data.title = String(page.data.title).replace('\t','');
-      page.data.title = String(page.data.title).replace('\r','');
-      page.data.title = String(page.data.title).replace('\n','');
-  
-      self.collectLinks($, page);
+
+
+      self.collectRelativeLinks($, page);
+      self.collectAbsoluteLinks($, page);
+
       self.crawl();
     });
   },
-  collectLinks : function($, parentPage, callback) {
+  
+  collectRelativeLinks : function($, parentPage) {
+    
     var self = this;
+    
     // Regexp to find for non-absolute links
-    var relativeLinks = $('a:not([href*="://"],[target="_blank"],[href^="#"],[href^="mailto:"])');
+    var relativeLinks = $('a:not([href*="://"],[href^="#"],[href^="mailto:"])');
+    
     console.log("Found " + relativeLinks.length + " relative links on page");
+    
     relativeLinks.each(function() {
-      //Replace backslashes 
-      $(this).attr('href').replace(/\\/g,"/");
+      //Check if a is present
+      if(!$(this).attr('href')){
+        return;
+      }
+
+      //Replace spaces and backslashes
+      var href = $(this).attr('href').replace(/ /g,"%20");
+      href = href.replace(/\\/g,"/");
+
+      if(href in self.pagesVisited) {
+        // We've already visited this page, so skip
+        return;
+      }
+      
       // If path is given wrt hostname
-      if($(this).attr('href').startsWith('/')){
-        var page = self.getObject(urljoin(self.baseUrl, $(this).attr('href')));        
+      if(href.startsWith('/')){
+        var page = self.getObject(urljoin(self.baseUrl, href));        
       }else{
         // If the parent-page has filename?
         if(parentPage.data.url.href.lastIndexOf('.') > parentPage.data.url.href.lastIndexOf('/')){
-          var base = path.parse(parentPage.data.url.href).dir;         
+          var base = path.parse(parentPage.data.url.href).dir; 
         }else{
           var base = parentPage.data.url.href;
+          base = base.replace(/\/$/, "");
         }
         //Spegetti for getting right static path name
-        var relative = $(this).attr('href');
+        var relative = href;
         var stack = base.split("/"),
         parts = relative.split("/");
-        stack.pop(); // remove current file name (or empty string)
-                  // (omit if "base" is the current folder without trailing slash)
+
         for (var i=0; i<parts.length; i++) {
           if (parts[i] == ".")
             continue;
@@ -149,31 +202,39 @@ Spyder.prototype = {
         var page = self.getObject(stack.join("/"));
       }
 
-      if (page.data.url.href in self.pagesVisited) {
-        // We've already visited this page, so skip
-        return;
-      }
       page.data.depth = parentPage.data.depth + 1;
       parentPage.children.push(page);
       self.pagesToVisit.push(page);
     });
+  },
 
-    if(this.visitAbsoluteLinks){
-      //Replace backslashes 
-      $(this).attr('href').replace(/\\/g,"/");
-      var absoluteLinks = $("a[href^='http'],[href^='https']");
-      console.log("Found " + absoluteLinks.length + " absolute links on page");
-      absoluteLinks.each(function() {
-        var page = self.getObject($(this).attr('href'));
-        if (page.data.url.href in self.pagesVisited || page.data.url.hostname != self.startUrl.data.url.hostname) {
-          // We've already visited this page, so skip
-          return;
-        }
-        page.data.depth = parentPage.data.depth + 1;
-        parentPage.children.push(page);
-        self.pagesToVisit.push(page);
-      });   
-    }
+  collectAbsoluteLinks: function($, parentPage){
+    var self = this;
+
+    var absoluteLinks = $("a[href^='http']");
+    console.log("Found " + absoluteLinks.length + " absolute links on page");
+    
+    absoluteLinks.each(function() {
+      //Replace spaces and backslashes
+      var href = $(this).attr('href').replace(/ /g,"%20");
+      href = href.replace(/\\/g,"/")
+      
+      if (href in self.pagesVisited) {
+        // We've already visited this page, so skip
+        return;
+      }
+
+      var page = self.getObject(href);
+
+      //Check hostname
+      if(!self.allowOtherHostname && page.data.url.hostname != self.startUrl.data.url.hostname){
+        return;
+      }
+
+      page.data.depth = parentPage.data.depth + 1;
+      parentPage.children.push(page);
+      self.pagesToVisit.push(page);
+    });   
   }
 } 
 
@@ -232,7 +293,6 @@ function startHTTPServer(){
   }).listen(8000);
   console.log('Server running at http://127.0.0.1:8000/'); 
 }
-
 
 // Genarate sitemap
 //fs.writeFileSync(path.join(__dirname, '../server/visitedPages.json'), '{}', 'utf-8');
