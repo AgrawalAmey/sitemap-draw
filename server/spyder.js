@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2011 Sencha Inc. - Author: Amey Agrawal (http://github.com/agrawalamey)
+Copyright (c) 2016 Author. Author: Amey Agrawal (http://github.com/agrawalamey)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -33,8 +33,8 @@ var urljoin = require('url-join');
 function Spyder(options){
   
   this.MAX_DEPTH = (options && options.maxDepth) || 6;
-  this.startUrl = (options && options.startUrl) || "http://10.1.50.45/tryhome/";
-  this.allowOtherHostname = (options && options.allowOtherHostname) || true;
+  this.startUrl = (options && options.startUrl) || "http://karpathy.github.io/";
+  this.allowOtherHostname = (options && options.allowOtherHostname) || false;
   this.pagesToVisit = [];
   this.pagesVisited = {};
   this.count = 0;
@@ -88,7 +88,7 @@ Spyder.prototype = {
       this.writeJSON();
       if(this.startServer == true){
         startHTTPServer();
-        open('http://localhost:8000');
+        open('http://localhost:8080');
       }
       return;
     }
@@ -101,6 +101,8 @@ Spyder.prototype = {
       //Check if the page was present in last crawl if yes mark isNew to false.
       if(nextPage.data.url.href in this.pagesLastVisited){
         nextPage.data.isNew = false;
+      }else{
+        nextPage.data.isNew = true;
       }
       this.visitPage(nextPage);
     }
@@ -108,8 +110,11 @@ Spyder.prototype = {
   
   visitPage: function(page) {
     var self = this;
+
+
+    // Make the request
     // Max depth condition & valid data type
-    if(page.data.depth > this.MAX_DEPTH || (this.validPageTypes.indexOf(path.extname(page.data.url.href))<0)) {
+    if(page.data.depth > this.MAX_DEPTH /*|| (this.validPageTypes.indexOf(path.extname(page.data.url.href))<0)*/) {
       self.crawl();
       return;
     }
@@ -290,8 +295,8 @@ function startHTTPServer(){
           }
       });
     
-  }).listen(8000);
-  console.log('Server running at http://127.0.0.1:8000/'); 
+  }).listen(8080);
+  console.log('Server running at http://127.0.0.1:8080/'); 
 }
 
 // Genarate sitemap
